@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Study Assistant - Cài đặt</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🎓 Study Assistant</h1>
+      <p>Cấu hình AI provider để bắt đầu tra cứu</p>
+    </header>
+
+    <section class="card">
+      <h2>1. Chọn AI Provider</h2>
+      <div class="provider-grid">
+        <label class="provider-option">
+          <input type="radio" name="provider" value="gemini" checked>
+          <div class="provider-card">
+            <div class="provider-name">Gemini</div>
+            <div class="provider-desc">Google · Có gói miễn phí</div>
+          </div>
+        </label>
+        <label class="provider-option">
+          <input type="radio" name="provider" value="claude">
+          <div class="provider-card">
+            <div class="provider-name">Claude</div>
+            <div class="provider-desc">Anthropic · Trả lời chi tiết</div>
+          </div>
+        </label>
+        <label class="provider-option">
+          <input type="radio" name="provider" value="openai">
+          <div class="provider-card">
+            <div class="provider-name">OpenAI</div>
+            <div class="provider-desc">GPT · Phổ biến</div>
+          </div>
+        </label>
+        <label class="provider-option">
+          <input type="radio" name="provider" value="custom">
+          <div class="provider-card">
+            <div class="provider-name">Custom Gateway</div>
+            <div class="provider-desc">API bên thứ 3 (OpenAI-compatible)</div>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <section class="card hidden" id="custom-gateway-section">
+      <h2>1b. Cấu hình Custom Gateway</h2>
+      <div class="field">
+        <label for="api-format">API Format</label>
+        <select id="api-format">
+          <option value="openai">OpenAI Compatible (chat/completions)</option>
+          <option value="anthropic">Anthropic Compatible (messages)</option>
+        </select>
+        <p class="hint">Chọn format gateway của bạn hỗ trợ</p>
+      </div>
+      <div class="field">
+        <label for="base-url">Gateway Base URL</label>
+        <input type="text" id="base-url" placeholder="https://gatecheap.io.vn">
+        <p class="hint">URL gốc của gateway, không kèm path</p>
+      </div>
+      <div class="field">
+        <label for="endpoint-path">Endpoint Path</label>
+        <input type="text" id="endpoint-path" placeholder="/v1/messages hoặc /v1/chat/completions">
+        <p class="hint">Mặc định: OpenAI dùng "/v1/chat/completions", Anthropic dùng "/v1/messages"</p>
+      </div>
+      <div class="field">
+        <label for="auth-scheme">Auth Scheme</label>
+        <input type="text" id="auth-scheme" placeholder="x-api-key">
+        <p class="hint">Tên header chứa API key. Dùng "Bearer" để gửi qua Authorization header</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. API Key</h2>
+      <div class="field">
+        <label for="api-key">API Key</label>
+        <div class="key-row">
+          <input type="password" id="api-key" placeholder="Nhập API key của provider đã chọn">
+          <button type="button" id="toggle-key" title="Hiện/ẩn">👁️</button>
+        </div>
+        <p class="hint" id="key-hint"></p>
+      </div>
+
+      <div class="field">
+        <label for="model">Model</label>
+        <input type="text" id="model" placeholder="(Để trống dùng mặc định)">
+        <p class="hint" id="model-hint"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3. Prompt hệ thống (tuỳ chọn)</h2>
+      <p class="hint">Tuỳ chỉnh cách AI trả lời. Để trống nếu muốn dùng prompt mặc định.</p>
+      <textarea id="system-prompt" rows="6" placeholder="Ví dụ: Bạn là trợ lý học tập môn Toán..."></textarea>
+    </section>
+
+    <section class="card">
+      <h2>4. Hành vi quét câu hỏi</h2>
+      <label class="toggle-row">
+        <input type="checkbox" id="auto-tick" checked>
+        <span>Tự động tick đáp án đúng sau khi quét</span>
+      </label>
+      <p class="hint">Khi bật, sau khi AI phân tích xong sẽ tự click vào radio/checkbox đáp án đúng. Tắt nếu bạn muốn xem trước rồi tự tick.</p>
+    </section>
+
+    <div class="actions">
+      <button id="save-btn">💾 Lưu cấu hình</button>
+      <button id="test-btn" class="secondary">🧪 Test kết nối</button>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+
+    <section class="card info">
+      <h3>Cách lấy API Key</h3>
+      <ul>
+        <li><strong>Gemini:</strong> <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> (miễn phí)</li>
+        <li><strong>Claude:</strong> <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></li>
+        <li><strong>OpenAI:</strong> <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

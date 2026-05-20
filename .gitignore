@@ -1,0 +1,24 @@
+# macOS / Windows
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local config (chứa API key có thể bị lộ)
+*.local.json
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build artifacts (nếu sau này dùng bundler)
+node_modules/
+dist/
+*.zip

@@ -1,0 +1,83 @@
+{
+  "manifest_version": 3,
+  "name": "Study Assistant - Tra cứu đáp án",
+  "version": "1.0.0",
+  "description": "Tra cứu đáp án bài tập, câu hỏi học tập bằng AI (Claude/OpenAI/Gemini)",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Study Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "src/options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "lookup-selection": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Tra cứu đoạn văn bản đang được bôi đen"
+    },
+    "open-popup": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Mở popup tra cứu nhanh"
+    },
+    "screenshot-lookup": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Chụp vùng màn hình để tra cứu"
+    },
+    "scan-question": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Q",
+        "mac": "Command+Shift+Q"
+      },
+      "description": "Tra cứu nhanh đáp án (toast)"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["src/content.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

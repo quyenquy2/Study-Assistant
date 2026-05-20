@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Study Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>🎓 Study Assistant</h1>
+    <button id="open-options" title="Cài đặt">⚙️</button>
+  </header>
+
+  <div id="no-key-warning" class="warning hidden">
+    Chưa cấu hình API key. <a href="#" id="link-options">Mở cài đặt</a>
+  </div>
+
+  <div class="ask-section">
+    <textarea id="question-input" rows="4" placeholder="Nhập câu hỏi hoặc dán bài tập vào đây..."></textarea>
+    <div class="btn-row">
+      <button id="ask-btn">Tra cứu (Ctrl+Enter)</button>
+      <button id="screenshot-btn" title="Chụp vùng màn hình (Ctrl+Shift+S)">📷</button>
+    </div>
+  </div>
+
+  <div id="answer-section" class="hidden">
+    <div class="answer-header">
+      <span>Đáp án</span>
+      <button id="copy-btn" title="Copy">📋</button>
+    </div>
+    <div id="answer-content"></div>
+  </div>
+
+  <div class="history-section">
+    <div class="history-header">
+      <span>Lịch sử</span>
+      <button id="clear-history">Xóa</button>
+    </div>
+    <ul id="history-list"></ul>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

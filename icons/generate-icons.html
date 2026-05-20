@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Tạo icons cho Study Assistant</title>
+<style>
+  body { font-family: sans-serif; padding: 24px; background: #f5f5f7; }
+  .row { display: flex; gap: 24px; margin: 20px 0; align-items: flex-end; }
+  .item { text-align: center; }
+  canvas { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  button { padding: 10px 18px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+</style>
+</head>
+<body>
+  <h1>🎓 Tạo icons</h1>
+  <p>Mở file này trong trình duyệt, click "Tải tất cả" rồi chuyển 3 file PNG vừa tải vào thư mục <code>icons/</code>.</p>
+
+  <div class="row">
+    <div class="item"><canvas id="c16" width="16" height="16"></canvas><div>16×16</div></div>
+    <div class="item"><canvas id="c48" width="48" height="48"></canvas><div>48×48</div></div>
+    <div class="item"><canvas id="c128" width="128" height="128"></canvas><div>128×128</div></div>
+  </div>
+
+  <button id="download-all">⬇️ Tải tất cả 3 icons</button>
+
+<script>
+function draw(canvas) {
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#667eea');
+  grad.addColorStop(1, '#764ba2');
+  ctx.fillStyle = grad;
+  // rounded square
+  const r = size * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(size - r, 0);
+  ctx.quadraticCurveTo(size, 0, size, r);
+  ctx.lineTo(size, size - r);
+  ctx.quadraticCurveTo(size, size, size - r, size);
+  ctx.lineTo(r, size);
+  ctx.quadraticCurveTo(0, size, 0, size - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // emoji "graduation cap"
+  ctx.font = `${size * 0.62}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🎓', size / 2, size * 0.56);
+}
+
+[16, 48, 128].forEach(s => draw(document.getElementById('c' + s)));
+
+function download(canvas, name) {
+  canvas.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+  });
+}
+
+document.getElementById('download-all').addEventListener('click', () => {
+  download(document.getElementById('c16'), 'icon16.png');
+  setTimeout(() => download(document.getElementById('c48'), 'icon48.png'), 200);
+  setTimeout(() => download(document.getElementById('c128'), 'icon128.png'), 400);
+});
+</script>
+</body>
+</html>
