@@ -111,6 +111,80 @@ textarea { resize: vertical; min-height: 100px; font-family: inherit; }
   border: 1px solid #d8dde3;
 }
 
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e7ef;
+  border-radius: 8px;
+  background: #fafbff;
+}
+
+.shortcut-meta {
+  min-width: 0;
+}
+
+.shortcut-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.shortcut-id {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8a93a3;
+}
+
+.shortcut-value {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shortcut-value.is-bound {
+  background: #eef2ff;
+  color: #4456c9;
+}
+
+.shortcut-value.is-unbound {
+  background: #fff1f0;
+  color: #c0392b;
+}
+
+.shortcut-empty {
+  padding: 12px;
+  border: 1px dashed #d8dde3;
+  border-radius: 8px;
+  color: #777;
+  font-size: 13px;
+  background: #fafafa;
+}
+
+.shortcut-actions {
+  margin-top: 12px;
+}
+
+.secondary-btn {
+  padding: 10px 14px;
+  border: 1px solid #d8dde3;
+  border-radius: 8px;
+  background: white;
+  color: #555;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .actions button:hover { opacity: 0.92; }
 
 .status {

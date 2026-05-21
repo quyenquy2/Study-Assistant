@@ -52,12 +52,11 @@
       },
       "description": "Tra cứu đoạn văn bản đang được bôi đen"
     },
-    "open-popup": {
+    "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+Shift+U",
         "mac": "Command+Shift+U"
-      },
-      "description": "Mở popup tra cứu nhanh"
+      }
     },
     "screenshot-lookup": {
       "suggested_key": {

@@ -44,9 +44,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 // === Keyboard shortcuts ===
-chrome.commands.onCommand.addListener(async (command) => {
+chrome.commands.onCommand.addListener(async (command, commandTab) => {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = commandTab?.id
+      ? commandTab
+      : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
     if (!tab?.id) {
       console.warn('[Study Assistant] No active tab for command', command);
       return;
@@ -62,14 +64,6 @@ chrome.commands.onCommand.addListener(async (command) => {
         if (text) await triggerLookupInTab(tab.id, text);
       } catch (e) {
         console.warn('[Study Assistant] lookup-selection failed:', e.message);
-      }
-    } else if (command === 'open-popup') {
-      try {
-        await chrome.action.openPopup();
-      } catch (e) {
-        // openPopup() yêu cầu active browser window có focus,
-        // nếu user đang ở DevTools/popup khác sẽ throw - bỏ qua an toàn
-        console.warn('[Study Assistant] openPopup failed:', e.message);
       }
     } else if (command === 'screenshot-lookup') {
       await startScreenshotMode(tab.id);

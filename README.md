@@ -51,6 +51,12 @@ Dán key vào Options → bấm **"Test kết nối"** để xác nhận hoạt 
 **Tình huống 4: Phím tắt**
 - Bôi đen text rồi nhấn `Ctrl+Shift+Y`
 
+### Nếu phím tắt không chạy
+
+- Mở `chrome://extensions/shortcuts`
+- Kiểm tra xem shortcut có đang bị trống hoặc bị trùng với shortcut khác không
+- Trong trang **Options** của extension, mục **Phím tắt** sẽ hiển thị shortcut nào đang thực sự được Chrome gán
+
 ## 🗂 Cấu trúc
 
 ```

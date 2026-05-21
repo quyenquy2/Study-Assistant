@@ -38,6 +38,7 @@ async function init() {
   $('#auto-tick').checked = cfg.autoTick !== false; // default true
 
   updateHints();
+  await renderShortcuts();
 
   document.querySelectorAll('input[name="provider"]').forEach((r) => {
     r.addEventListener('change', updateHints);
@@ -52,6 +53,7 @@ async function init() {
 
   $('#save-btn').addEventListener('click', save);
   $('#test-btn').addEventListener('click', test);
+  $('#open-shortcuts').addEventListener('click', openShortcutsPage);
 }
 
 function getProvider() {
@@ -131,8 +133,62 @@ async function test() {
   }
 }
 
+async function renderShortcuts() {
+  const container = $('#shortcut-list');
+  if (!container) return;
+
+  const labels = {
+    'lookup-selection': 'Tra cứu đoạn bôi đen',
+    '_execute_action': 'Mở popup Study Assistant',
+    'screenshot-lookup': 'Chụp vùng màn hình',
+    'scan-question': 'Tra cứu nhanh (toast)'
+  };
+
+  try {
+    const commands = await chrome.commands.getAll();
+    const interesting = commands.filter((cmd) => labels[cmd.name]);
+
+    container.innerHTML = '';
+    if (interesting.length === 0) {
+      container.innerHTML = '<div class="shortcut-empty">Không đọc được danh sách phím tắt từ Chrome.</div>';
+      return;
+    }
+
+    for (const cmd of interesting) {
+      const row = document.createElement('div');
+      row.className = 'shortcut-row';
+      const shortcut = cmd.shortcut?.trim();
+      row.innerHTML = `
+        <div class="shortcut-meta">
+          <div class="shortcut-name">${escapeHtml(labels[cmd.name])}</div>
+          <div class="shortcut-id">${escapeHtml(cmd.name)}</div>
+        </div>
+        <div class="shortcut-value ${shortcut ? 'is-bound' : 'is-unbound'}">
+          ${escapeHtml(shortcut || 'Chưa được gán')}
+        </div>
+      `;
+      container.appendChild(row);
+    }
+  } catch (err) {
+    container.innerHTML = `<div class="shortcut-empty">Không đọc được phím tắt: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function openShortcutsPage() {
+  await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+}
+
 function showStatus(text, type) {
   const el = $('#status');
   el.textContent = text;
   el.className = `status ${type}`;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
