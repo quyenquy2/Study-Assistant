@@ -2,6 +2,7 @@
 // Xử lý: context menu, keyboard shortcut, gọi API AI, chụp ảnh màn hình
 
 import { askAI } from './api.js';
+import { formatDocumentContext, searchRelevantChunks } from './documents.js';
 
 const CONTEXT_MENU_LOOKUP = 'study-assistant-lookup';
 const CONTEXT_MENU_SCREENSHOT = 'study-assistant-screenshot';
@@ -201,6 +202,8 @@ async function handleAsk(question, context, imageDataUrl) {
   }
 
   try {
+    const documentContext = await getRelevantDocumentContext(question, imageDataUrl);
+    const mergedContext = mergeContexts(documentContext, context);
     const answer = await askAI({
       provider: config.provider || 'gemini',
       apiKey: config.apiKey,
@@ -211,7 +214,7 @@ async function handleAsk(question, context, imageDataUrl) {
       endpointPath: config.endpointPath,
       apiFormat: config.apiFormat,
       question,
-      context,
+      context: mergedContext,
       imageDataUrl
     });
 
@@ -228,4 +231,30 @@ async function handleAsk(question, context, imageDataUrl) {
   } catch (err) {
     return { ok: false, error: err.message };
   }
+}
+
+async function getRelevantDocumentContext(question, imageDataUrl) {
+  const retrievalQuery = buildRetrievalQuery(question, imageDataUrl);
+  if (!retrievalQuery) return '';
+
+  try {
+    const chunks = await searchRelevantChunks(retrievalQuery, 6, { fallback: !!imageDataUrl });
+    return formatDocumentContext(chunks);
+  } catch (err) {
+    console.warn('[Study Assistant] document retrieval failed:', err.message);
+    return '';
+  }
+}
+
+function buildRetrievalQuery(question, imageDataUrl) {
+  const text = (question || '').trim();
+  if (text) return text;
+  if (imageDataUrl) {
+    return 'bài tập câu hỏi trắc nghiệm đáp án công thức định nghĩa nội dung trong ảnh';
+  }
+  return '';
+}
+
+function mergeContexts(documentContext, pageContext) {
+  return [documentContext, pageContext].filter((part) => part && part.trim()).join('\n\n');
 }

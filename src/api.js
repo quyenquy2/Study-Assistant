@@ -22,11 +22,12 @@ export async function askAI({
   imageDataUrl
 }) {
   const sys = systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT;
-  const userText = imageDataUrl
+  const questionText = imageDataUrl
     ? (question?.trim() || VISION_PROMPT)
-    : (context
-        ? `Ngữ cảnh từ trang web:\n"""\n${context}\n"""\n\nCâu hỏi/bài tập:\n${question}`
-        : question);
+    : question;
+  const userText = context
+    ? `Ngữ cảnh bổ sung:\n"""\n${context}\n"""\n\nCâu hỏi/bài tập:\n${questionText}`
+    : questionText;
 
   switch (provider) {
     case 'claude':

@@ -198,6 +198,120 @@ textarea { resize: vertical; min-height: 100px; font-family: inherit; }
   margin-top: 12px;
 }
 
+.document-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.document-upload-row input[type="file"] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px dashed #cfd6e2;
+  border-radius: 8px;
+  background: #fafbff;
+  font-size: 13px;
+}
+
+.document-status {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.document-status.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.document-status.error {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.document-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.document-empty {
+  padding: 12px;
+  border: 1px dashed #d8dde3;
+  border-radius: 8px;
+  color: #777;
+  font-size: 13px;
+  background: #fafafa;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e7ef;
+  border-radius: 8px;
+  background: #fafbff;
+}
+
+.document-item.is-error {
+  border-color: #f3c3bd;
+  background: #fff8f7;
+}
+
+.document-meta {
+  min-width: 0;
+}
+
+.document-name {
+  font-weight: 600;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8a93a3;
+}
+
+.document-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.document-badge {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4456c9;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.document-item.is-error .document-badge {
+  background: #fff1f0;
+  color: #c0392b;
+}
+
+.document-actions button {
+  padding: 7px 9px;
+  border: 1px solid #d8dde3;
+  border-radius: 7px;
+  background: white;
+  color: #c0392b;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .secondary-btn {
   padding: 10px 14px;
   border: 1px solid #d8dde3;

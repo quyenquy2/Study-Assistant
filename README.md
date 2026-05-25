@@ -10,6 +10,7 @@ Extension Chrome tra cứu đáp án bài tập, câu hỏi học tập bằng A
 - **2 mode trả lời**
   - **Detail**: hiện popup nổi trên trang và trả lời theo prompt hệ thống đã cấu hình.
   - **Quick**: chỉ hiện toast nhỏ ở góc màn hình với đáp án ngắn.
+- **Tài liệu tham khảo PDF**: nạp PDF text-based trong Options để AI dùng các đoạn liên quan làm ngữ cảnh khi trả lời.
 - Hỗ trợ Gemini, Claude, OpenAI và Custom Gateway.
 - Lưu lịch sử 50 câu hỏi gần nhất.
 
@@ -43,6 +44,7 @@ Chọn provider trong Options, dán API key, chọn mode `Detail` hoặc `Quick`
 - **Tra cứu đoạn bôi đen**: bôi đen text rồi click nút nổi, dùng context menu, hoặc nhấn `Ctrl+Shift+Y`.
 - **Chụp vùng màn hình**: click nút camera trong popup, dùng context menu, hoặc nhấn `Ctrl+Shift+S`.
 - **Đổi mode**: chọn `Detail` hoặc `Quick` trong popup hoặc Options. Mode áp dụng cho cả hai chức năng trên.
+- **Nạp tài liệu**: vào Options -> **Tài liệu tham khảo**, chọn PDF. Extension chỉ lưu text/chunks local trên máy và gửi các đoạn liên quan khi hỏi.
 
 Nếu phím tắt không chạy, mở `chrome://extensions/shortcuts` để kiểm tra shortcut có bị trùng hay chưa được gán không.
 
@@ -59,16 +61,19 @@ study-assistant-extension/
 └── src/
     ├── background.js
     ├── api.js
+    ├── documents.js
     ├── content.js
     ├── content.css
     ├── popup.html / .js / .css
-    └── options.html / .js / .css
+    ├── options.html / .js / .css
+    └── vendor/pdfjs/
 ```
 
 ## Quyền riêng tư
 
 - API key lưu trong `chrome.storage.sync`.
 - Lịch sử lưu trong `chrome.storage.local`.
+- Tài liệu PDF được trích text và lưu local trong IndexedDB; file gốc không được upload.
 - Câu hỏi chỉ được gửi đến provider AI đã chọn, không qua server trung gian của extension.
 
 ## Tùy chỉnh prompt

@@ -1,5 +1,7 @@
 // Study Assistant - Options page
 
+import { deleteDocument, importPdfFile, listDocuments } from './documents.js';
+
 const $ = (s) => document.querySelector(s);
 
 const MODEL_DEFAULTS = {
@@ -60,6 +62,10 @@ async function init() {
   $('#show-selection-icon').addEventListener('change', async () => {
     await chrome.storage.sync.set({ showSelectionIcon: $('#show-selection-icon').checked });
   });
+  $('#pdf-upload').addEventListener('change', handlePdfUpload);
+  $('#document-list').addEventListener('click', handleDocumentListClick);
+
+  await renderDocuments();
 }
 
 function getProvider() {
@@ -180,6 +186,84 @@ async function renderShortcuts() {
   } catch (err) {
     container.innerHTML = `<div class="shortcut-empty">Không đọc được phím tắt: ${escapeHtml(err.message)}</div>`;
   }
+}
+
+async function handlePdfUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+
+  $('#pdf-upload').disabled = true;
+  try {
+    for (const file of files) {
+      showDocumentStatus(`Đang đọc "${file.name}"...`, 'success');
+      const doc = await importPdfFile(file);
+      if (doc.status === 'ready') {
+        showDocumentStatus(`✓ Đã index "${doc.name}" (${doc.pageCount} trang, ${doc.chunkCount} đoạn)`, 'success');
+      } else {
+        showDocumentStatus(`⚠️ ${doc.name}: ${doc.error || 'Không đọc được PDF'}`, 'error');
+      }
+      await renderDocuments();
+    }
+  } catch (err) {
+    showDocumentStatus(`⚠️ ${err.message}`, 'error');
+  } finally {
+    $('#pdf-upload').value = '';
+    $('#pdf-upload').disabled = false;
+  }
+}
+
+async function handleDocumentListClick(event) {
+  const btn = event.target.closest('[data-delete-document]');
+  if (!btn) return;
+
+  const documentId = btn.getAttribute('data-delete-document');
+  btn.disabled = true;
+  await deleteDocument(documentId);
+  showDocumentStatus('Đã xóa tài liệu', 'success');
+  await renderDocuments();
+}
+
+async function renderDocuments() {
+  const list = $('#document-list');
+  const docs = await listDocuments();
+  list.innerHTML = '';
+
+  if (docs.length === 0) {
+    list.innerHTML = '<div class="document-empty">Chưa có tài liệu nào</div>';
+    return;
+  }
+
+  for (const doc of docs) {
+    const item = document.createElement('div');
+    item.className = `document-item is-${doc.status}`;
+    const meta = doc.status === 'ready'
+      ? `${doc.pageCount || 0} trang · ${doc.chunkCount || 0} đoạn · ${formatFileSize(doc.size)}`
+      : `${formatFileSize(doc.size)} · ${doc.error || 'Không đọc được PDF'}`;
+    item.innerHTML = `
+      <div class="document-meta">
+        <div class="document-name">${escapeHtml(doc.name)}</div>
+        <div class="document-sub">${escapeHtml(meta)}</div>
+      </div>
+      <div class="document-actions">
+        <span class="document-badge">${doc.status === 'ready' ? 'Đã index' : 'Lỗi'}</span>
+        <button type="button" data-delete-document="${escapeHtml(doc.id)}">Xóa</button>
+      </div>
+    `;
+    list.appendChild(item);
+  }
+}
+
+function showDocumentStatus(text, type) {
+  const el = $('#document-status');
+  el.textContent = text;
+  el.className = `document-status ${type}`;
+}
+
+function formatFileSize(bytes) {
+  const size = Number(bytes || 0);
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
 async function openShortcutsPage() {
