@@ -24,7 +24,7 @@ async function init() {
   const cfg = await chrome.storage.sync.get([
     'provider', 'apiKey', 'model', 'systemPrompt',
     'baseUrl', 'authScheme', 'endpointPath', 'apiFormat', 'lookupMode',
-    'showSelectionIcon'
+    'showSelectionIcon', 'indexPdfVisuals'
   ]);
 
   if (cfg.provider) {
@@ -41,6 +41,7 @@ async function init() {
   const modeRadio = document.querySelector(`input[name="lookupMode"][value="${cfg.lookupMode || 'detail'}"]`);
   if (modeRadio) modeRadio.checked = true;
   $('#show-selection-icon').checked = cfg.showSelectionIcon !== false;
+  $('#index-pdf-visuals').checked = cfg.indexPdfVisuals === true;
 
   updateHints();
   await renderShortcuts();
@@ -61,6 +62,9 @@ async function init() {
   $('#open-shortcuts').addEventListener('click', openShortcutsPage);
   $('#show-selection-icon').addEventListener('change', async () => {
     await chrome.storage.sync.set({ showSelectionIcon: $('#show-selection-icon').checked });
+  });
+  $('#index-pdf-visuals').addEventListener('change', async () => {
+    await chrome.storage.sync.set({ indexPdfVisuals: $('#index-pdf-visuals').checked });
   });
   $('#pdf-upload').addEventListener('change', handlePdfUpload);
   $('#document-list').addEventListener('click', handleDocumentListClick);
@@ -107,6 +111,7 @@ async function save() {
   const apiFormat = $('#api-format').value;
   const lookupMode = document.querySelector('input[name="lookupMode"]:checked')?.value || 'detail';
   const showSelectionIcon = $('#show-selection-icon').checked;
+  const indexPdfVisuals = $('#index-pdf-visuals').checked;
 
   if (!apiKey) {
     showStatus('Vui lòng nhập API key', 'error');
@@ -122,7 +127,8 @@ async function save() {
     provider, apiKey, model, systemPrompt,
     baseUrl, endpointPath, authScheme, apiFormat,
     lookupMode,
-    showSelectionIcon
+    showSelectionIcon,
+    indexPdfVisuals
   });
   showStatus(`✓ Đã lưu cấu hình (provider: ${provider}, mode: ${lookupMode})`, 'success');
 }
@@ -192,13 +198,24 @@ async function handlePdfUpload(event) {
   const files = Array.from(event.target.files || []);
   if (files.length === 0) return;
 
+  const indexPdfVisuals = $('#index-pdf-visuals').checked;
+  const visualIndex = indexPdfVisuals ? getVisualIndexConfig() : { enabled: false };
+  if (indexPdfVisuals && !visualIndex.apiKey) {
+    showDocumentStatus('Bật phân tích ảnh/sơ đồ PDF cần API key.', 'error');
+    $('#pdf-upload').value = '';
+    return;
+  }
+
   $('#pdf-upload').disabled = true;
   try {
     for (const file of files) {
       showDocumentStatus(`Đang đọc "${file.name}"...`, 'success');
-      const doc = await importPdfFile(file);
+      const doc = await importPdfFile(file, {
+        visualIndex,
+        onProgress: createPdfProgressHandler(file.name)
+      });
       if (doc.status === 'ready') {
-        showDocumentStatus(`✓ Đã index "${doc.name}" (${doc.pageCount} trang, ${doc.chunkCount} đoạn)`, 'success');
+        showDocumentStatus(`✓ Đã index "${doc.name}" (${formatDocumentImportMeta(doc)})`, 'success');
       } else {
         showDocumentStatus(`⚠️ ${doc.name}: ${doc.error || 'Không đọc được PDF'}`, 'error');
       }
@@ -210,6 +227,32 @@ async function handlePdfUpload(event) {
     $('#pdf-upload').value = '';
     $('#pdf-upload').disabled = false;
   }
+}
+
+function getVisualIndexConfig() {
+  return {
+    enabled: true,
+    provider: getProvider(),
+    apiKey: $('#api-key').value.trim(),
+    model: $('#model').value.trim(),
+    baseUrl: $('#base-url').value.trim(),
+    endpointPath: $('#endpoint-path').value.trim(),
+    authScheme: $('#auth-scheme').value.trim(),
+    apiFormat: $('#api-format').value
+  };
+}
+
+function createPdfProgressHandler(fileName) {
+  return ({ phase, pageNumber, pageCount }) => {
+    if (!pageNumber || !pageCount) return;
+
+    const label = {
+      text: 'Đang trích text',
+      'visual-render': 'Đang render trang PDF',
+      'visual-ai': 'Đang AI đọc ảnh/sơ đồ'
+    }[phase] || 'Đang đọc';
+    showDocumentStatus(`${label} "${fileName}" (${pageNumber}/${pageCount})...`, 'success');
+  };
 }
 
 async function handleDocumentListClick(event) {
@@ -237,7 +280,7 @@ async function renderDocuments() {
     const item = document.createElement('div');
     item.className = `document-item is-${doc.status}`;
     const meta = doc.status === 'ready'
-      ? `${doc.pageCount || 0} trang · ${doc.chunkCount || 0} đoạn · ${formatFileSize(doc.size)}`
+      ? `${doc.pageCount || 0} trang · ${doc.chunkCount || 0} đoạn${formatVisualMeta(doc)} · ${formatFileSize(doc.size)}`
       : `${formatFileSize(doc.size)} · ${doc.error || 'Không đọc được PDF'}`;
     item.innerHTML = `
       <div class="document-meta">
@@ -251,6 +294,18 @@ async function renderDocuments() {
     `;
     list.appendChild(item);
   }
+}
+
+function formatDocumentImportMeta(doc) {
+  return `${doc.pageCount || 0} trang, ${doc.chunkCount || 0} đoạn${formatVisualMeta(doc).replaceAll(' · ', ', ')}`;
+}
+
+function formatVisualMeta(doc) {
+  if (!doc.visualIndexStatus || doc.visualIndexStatus === 'off') return '';
+  const count = doc.visualChunkCount || 0;
+  const errors = doc.visualErrorCount || 0;
+  const errorText = errors > 0 ? `, lỗi ${errors} trang` : '';
+  return ` · ${count} trang ảnh/OCR${errorText}`;
 }
 
 function showDocumentStatus(text, type) {

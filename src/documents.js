@@ -1,5 +1,7 @@
 // Study Assistant - Local document store and PDF retrieval
 
+import { describeDocumentPageImage } from './api.js';
+
 const DB_NAME = 'studyAssistantDocs';
 const DB_VERSION = 1;
 const DOC_STORE = 'documents';
@@ -13,15 +15,22 @@ const MAX_CONTEXT_CHARS = 8000;
 const DEFAULT_SEARCH_LIMIT = 6;
 const MIN_SCORE = 1.5;
 
+const VISUAL_RENDER_MAX_DIMENSION = 1400;
+const VISUAL_RENDER_MAX_SCALE = 2;
+const VISUAL_IMAGE_QUALITY = 0.78;
+const VISUAL_MIN_TEXT_LENGTH = 60;
+const VISUAL_MAX_TEXT_LENGTH = 1800;
+
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'how', 'in', 'is', 'it', 'of', 'on', 'or', 'that', 'the', 'this', 'to', 'what', 'when', 'where', 'which', 'with',
   'ai', 'anh', 'bai', 'ban', 'bang', 'bi', 'bo', 'cac', 'cach', 'cai', 'can', 'cau', 'cho', 'co', 'con', 'cua', 'da', 'dang', 'day', 'de', 'den', 'di', 'do', 'duoc',
   'gi', 'giua', 'hay', 'hoi', 'khong', 'khi', 'la', 'lam', 'mot', 'nay', 'neu', 'nhung', 'nhu', 'o', 'ra', 'rang', 'sau', 'se', 'the', 'thi', 'trong', 'tu', 'va', 've', 'voi'
 ]);
 
-export async function importPdfFile(file) {
+export async function importPdfFile(file, options = {}) {
   const now = Date.now();
   const documentId = createId();
+  const visualIndex = normalizeVisualIndexOptions(options.visualIndex);
   const baseDoc = {
     id: documentId,
     name: file.name || 'document.pdf',
@@ -29,6 +38,10 @@ export async function importPdfFile(file) {
     size: file.size || 0,
     pageCount: 0,
     chunkCount: 0,
+    textChunkCount: 0,
+    visualChunkCount: 0,
+    visualErrorCount: 0,
+    visualIndexStatus: visualIndex.enabled ? 'processing' : 'off',
     addedAt: now,
     status: 'processing',
     error: ''
@@ -38,33 +51,54 @@ export async function importPdfFile(file) {
 
   try {
     validatePdfFile(file);
-    const pages = await extractPdfPages(file);
-    const pageCount = pages.length;
-    const textLength = pages.reduce((sum, page) => sum + page.text.length, 0);
-
-    if (textLength < 80) {
-      throw new Error('PDF này có thể là scan/ảnh, v1 chưa hỗ trợ OCR.');
+    if (visualIndex.enabled && !visualIndex.apiKey) {
+      throw new Error('Bật phân tích ảnh/sơ đồ PDF cần API key.');
     }
 
-    const chunks = buildChunks(pages).map((chunk, index) => ({
+    const extraction = await extractPdfContent(file, {
+      documentName: baseDoc.name,
+      onProgress: options.onProgress,
+      visualIndex
+    });
+    const textChunks = buildChunks(extraction.pages).map((chunk) => ({
+      ...chunk,
+      source: 'text'
+    }));
+    const visualChunks = extraction.visualPages.map((page) => ({
+      pageStart: page.page,
+      pageEnd: page.page,
+      source: 'visual',
+      text: page.text
+    }));
+    const rawChunks = [...textChunks, ...visualChunks];
+
+    if (rawChunks.length === 0) {
+      if (visualIndex.enabled) {
+        throw new Error('Không đọc được nội dung text/ảnh từ PDF. Hãy kiểm tra API vision hoặc thử PDF khác.');
+      }
+      throw new Error('PDF này có thể là scan/ảnh. Bật phân tích ảnh/sơ đồ bằng AI khi nạp để index loại PDF này.');
+    }
+
+    const chunks = rawChunks.map((chunk, index) => ({
       id: `${documentId}:${index}`,
       documentId,
       pageStart: chunk.pageStart,
       pageEnd: chunk.pageEnd,
+      source: chunk.source || 'text',
       text: chunk.text,
       normalizedText: normalizeText(chunk.text),
       tokenEstimate: estimateTokens(chunk.text)
     }));
 
-    if (chunks.length === 0) {
-      throw new Error('Không trích xuất được nội dung text từ PDF.');
-    }
-
     await replaceDocumentChunks(documentId, chunks);
     const doc = {
       ...baseDoc,
-      pageCount,
+      pageCount: extraction.pageCount,
       chunkCount: chunks.length,
+      textChunkCount: textChunks.length,
+      visualChunkCount: visualChunks.length,
+      visualErrorCount: extraction.visualErrors.length,
+      visualIndexStatus: getVisualIndexStatus(visualIndex, visualChunks.length, extraction.visualErrors.length),
       status: 'ready',
       error: ''
     };
@@ -75,6 +109,7 @@ export async function importPdfFile(file) {
     const errorDoc = {
       ...baseDoc,
       status: 'error',
+      visualIndexStatus: visualIndex.enabled ? 'error' : 'off',
       error: err?.message || 'Không đọc được PDF.'
     };
     await putDocument(errorDoc);
@@ -117,13 +152,14 @@ export async function searchRelevantChunks(query, limit = DEFAULT_SEARCH_LIMIT, 
     return options.fallback ? withDocumentNames(readyChunks.slice(0, limit), readyDocs) : [];
   }
 
+  const locationIntent = isLocationQuery(normalizedQuery);
   const scored = readyChunks
     .map((chunk) => ({
       ...chunk,
       score: scoreChunk(chunk, terms, normalizedQuery)
     }))
     .filter((chunk) => chunk.score >= MIN_SCORE)
-    .sort((a, b) => b.score - a.score || (b.text.length - a.text.length));
+    .sort((a, b) => sortScoredChunks(a, b, locationIntent));
 
   const selected = scored.length > 0
     ? scored.slice(0, limit)
@@ -139,7 +175,8 @@ export function formatDocumentContext(chunks) {
   const parts = [];
   for (const chunk of chunks) {
     const pageLabel = formatPageRange(chunk.pageStart, chunk.pageEnd);
-    const header = `[${chunk.documentName || 'Tài liệu'}, ${pageLabel}]`;
+    const sourceLabel = chunk.source === 'visual' ? ', OCR/ảnh' : '';
+    const header = `[${chunk.documentName || 'Tài liệu'}, ${pageLabel}${sourceLabel}]`;
     const text = chunk.text.trim();
     const next = `${header}\n${text}`;
     if (total + next.length > MAX_CONTEXT_CHARS && parts.length > 0) break;
@@ -222,11 +259,11 @@ function txDone(tx) {
 function validatePdfFile(file) {
   const name = (file.name || '').toLowerCase();
   if (!name.endsWith('.pdf') && file.type !== 'application/pdf') {
-    throw new Error('V1 chỉ hỗ trợ file PDF.');
+    throw new Error('Chỉ hỗ trợ file PDF.');
   }
 }
 
-async function extractPdfPages(file) {
+async function extractPdfContent(file, { documentName, onProgress, visualIndex }) {
   const pdfjsLib = await import('./vendor/pdfjs/pdf.mjs');
   pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('src/vendor/pdfjs/pdf.worker.mjs');
 
@@ -234,23 +271,88 @@ async function extractPdfPages(file) {
   const loadingTask = pdfjsLib.getDocument({ data, disableFontFace: true });
   const pdf = await loadingTask.promise;
   const pages = [];
+  const visualPages = [];
+  const visualErrors = [];
 
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-    const page = await pdf.getPage(pageNumber);
-    const content = await page.getTextContent();
-    const text = content.items
-      .map((item) => item.str || '')
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (text) {
-      pages.push({ page: pageNumber, text });
+  try {
+    const pageCount = pdf.numPages;
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+      notifyProgress(onProgress, { phase: 'text', pageNumber, pageCount });
+      const page = await pdf.getPage(pageNumber);
+
+      try {
+        const text = await extractPageText(page);
+        if (text) {
+          pages.push({ page: pageNumber, text });
+        }
+
+        if (visualIndex.enabled) {
+          try {
+            notifyProgress(onProgress, { phase: 'visual-render', pageNumber, pageCount });
+            const imageDataUrl = await renderPdfPageImage(page);
+            notifyProgress(onProgress, { phase: 'visual-ai', pageNumber, pageCount });
+            const description = await describeDocumentPageImage({
+              ...visualIndex,
+              imageDataUrl,
+              documentName,
+              pageNumber,
+              extractedText: text
+            });
+            const visualText = cleanVisualDescription(description);
+            if (visualText) {
+              visualPages.push({
+                page: pageNumber,
+                text: `OCR/mô tả hình ảnh trang ${pageNumber}: ${visualText}`
+              });
+            }
+          } catch (err) {
+            visualErrors.push({ page: pageNumber, error: err?.message || 'Không phân tích được ảnh trang PDF.' });
+          }
+        }
+      } finally {
+        page.cleanup?.();
+      }
     }
-    page.cleanup?.();
+
+    return { pageCount, pages, visualPages, visualErrors };
+  } finally {
+    await pdf.destroy?.();
+  }
+}
+
+async function extractPageText(page) {
+  const content = await page.getTextContent();
+  return content.items
+    .map((item) => item.str || '')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function renderPdfPageImage(page) {
+  if (typeof document === 'undefined') {
+    throw new Error('Chỉ có thể phân tích ảnh PDF trong trang Options.');
   }
 
-  await pdf.destroy?.();
-  return pages;
+  const baseViewport = page.getViewport({ scale: 1 });
+  const maxDimension = Math.max(baseViewport.width, baseViewport.height);
+  const scale = Math.min(VISUAL_RENDER_MAX_SCALE, VISUAL_RENDER_MAX_DIMENSION / maxDimension);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  const width = Math.ceil(viewport.width);
+  const height = Math.ceil(viewport.height);
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, width, height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const dataUrl = canvas.toDataURL('image/jpeg', VISUAL_IMAGE_QUALITY);
+  canvas.width = 1;
+  canvas.height = 1;
+  return dataUrl;
 }
 
 function buildChunks(pages) {
@@ -337,11 +439,24 @@ function scoreChunk(chunk, terms, normalizedQuery) {
     score += 5;
   }
 
+  if (chunk.source === 'visual') {
+    score *= 1.1;
+  }
+
   if ((chunk.text || '').length < 300) {
     score *= 0.85;
   }
 
   return score;
+}
+
+function sortScoredChunks(a, b, locationIntent) {
+  if (locationIntent) {
+    return (a.pageStart || 0) - (b.pageStart || 0)
+      || b.score - a.score
+      || (b.text.length - a.text.length);
+  }
+  return b.score - a.score || (b.text.length - a.text.length);
 }
 
 function getSearchTerms(normalizedQuery) {
@@ -363,6 +478,10 @@ function getSearchTerms(normalizedQuery) {
   return Array.from(new Set(terms)).slice(0, 80);
 }
 
+function isLocationQuery(normalizedQuery) {
+  return /\b(dau tien|trang may|trang nao|o dau|nam o|xuat hien|vi du dau|bai tap dau)\b/.test(normalizedQuery);
+}
+
 function withDocumentNames(chunks, docsById) {
   return chunks.map((chunk) => ({
     ...chunk,
@@ -373,6 +492,44 @@ function withDocumentNames(chunks, docsById) {
 function formatPageRange(start, end) {
   if (!start && !end) return 'không rõ trang';
   return start === end ? `trang ${start}` : `trang ${start}-${end}`;
+}
+
+function normalizeVisualIndexOptions(options) {
+  return {
+    enabled: !!options?.enabled,
+    provider: options?.provider,
+    apiKey: options?.apiKey,
+    model: options?.model,
+    baseUrl: options?.baseUrl,
+    authScheme: options?.authScheme,
+    endpointPath: options?.endpointPath,
+    apiFormat: options?.apiFormat
+  };
+}
+
+function getVisualIndexStatus(visualIndex, visualChunkCount, visualErrorCount) {
+  if (!visualIndex.enabled) return 'off';
+  if (visualChunkCount > 0 && visualErrorCount > 0) return 'partial';
+  if (visualChunkCount > 0) return 'ready';
+  if (visualErrorCount > 0) return 'error';
+  return 'empty';
+}
+
+function cleanVisualDescription(text) {
+  const cleaned = cleanChunkText(text);
+  if (!cleaned || /^empty\.?$/i.test(cleaned)) return '';
+  if (/^(khong co|không có|trang trong|trang trống)/i.test(cleaned)) return '';
+  if (cleaned.length < VISUAL_MIN_TEXT_LENGTH) return '';
+  return cleaned.slice(0, VISUAL_MAX_TEXT_LENGTH);
+}
+
+function notifyProgress(onProgress, payload) {
+  if (typeof onProgress !== 'function') return;
+  try {
+    onProgress(payload);
+  } catch (err) {
+    console.warn('[Study Assistant] document progress handler failed:', err);
+  }
 }
 
 function normalizeText(text) {

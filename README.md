@@ -10,7 +10,7 @@ Extension Chrome tra cứu đáp án bài tập, câu hỏi học tập bằng A
 - **2 mode trả lời**
   - **Detail**: hiện popup nổi trên trang và trả lời theo prompt hệ thống đã cấu hình.
   - **Quick**: chỉ hiện toast nhỏ ở góc màn hình với đáp án ngắn.
-- **Tài liệu tham khảo PDF**: nạp PDF text-based trong Options để AI dùng các đoạn liên quan làm ngữ cảnh khi trả lời.
+- **Tài liệu tham khảo PDF**: nạp PDF trong Options để AI dùng các đoạn liên quan làm ngữ cảnh khi trả lời; có tuỳ chọn AI OCR/mô tả ảnh, sơ đồ, biểu đồ trong PDF.
 - Hỗ trợ Gemini, Claude, OpenAI và Custom Gateway.
 - Lưu lịch sử 50 câu hỏi gần nhất.
 
@@ -44,7 +44,7 @@ Chọn provider trong Options, dán API key, chọn mode `Detail` hoặc `Quick`
 - **Tra cứu đoạn bôi đen**: bôi đen text rồi click nút nổi, dùng context menu, hoặc nhấn `Ctrl+Shift+Y`.
 - **Chụp vùng màn hình**: click nút camera trong popup, dùng context menu, hoặc nhấn `Ctrl+Shift+S`.
 - **Đổi mode**: chọn `Detail` hoặc `Quick` trong popup hoặc Options. Mode áp dụng cho cả hai chức năng trên.
-- **Nạp tài liệu**: vào Options -> **Tài liệu tham khảo**, chọn PDF. Extension chỉ lưu text/chunks local trên máy và gửi các đoạn liên quan khi hỏi.
+- **Nạp tài liệu**: vào Options -> **Tài liệu tham khảo**, chọn PDF. Nếu cần đọc PDF scan/ảnh/sơ đồ, bật **Phân tích ảnh, sơ đồ, biểu đồ trong PDF bằng AI khi nạp** trước khi chọn file.
 
 Nếu phím tắt không chạy, mở `chrome://extensions/shortcuts` để kiểm tra shortcut có bị trùng hay chưa được gán không.
 
@@ -73,7 +73,8 @@ study-assistant-extension/
 
 - API key lưu trong `chrome.storage.sync`.
 - Lịch sử lưu trong `chrome.storage.local`.
-- Tài liệu PDF được trích text và lưu local trong IndexedDB; file gốc không được upload.
+- Tài liệu PDF được trích text và lưu local trong IndexedDB; file gốc không được lưu/upload.
+- Nếu bật phân tích ảnh/sơ đồ PDF, extension render từng trang thành ảnh và gửi ảnh trang đó đến provider AI đã chọn để tạo OCR/mô tả. Sau import, chỉ text mô tả được lưu local và mỗi câu hỏi vẫn chỉ gửi các chunks liên quan.
 - Câu hỏi chỉ được gửi đến provider AI đã chọn, không qua server trung gian của extension.
 
 ## Tùy chỉnh prompt

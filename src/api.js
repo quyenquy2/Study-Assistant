@@ -8,6 +8,10 @@ const DEFAULT_SYSTEM_PROMPT = `Bạn là trợ lý học tập. Khi nhận đư�
 4. Trả lời bằng tiếng Việt.`;
 
 const VISION_PROMPT = 'Hãy đọc nội dung trong hình ảnh và giải bài tập/trả lời câu hỏi xuất hiện trong đó.';
+const DOCUMENT_VISION_SYSTEM_PROMPT = `Bạn là công cụ OCR và mô tả tài liệu học tập.
+Nhiệm vụ của bạn là biến một trang PDF thành nội dung text để phục vụ tìm kiếm sau này.
+Trích xuất chữ, công thức, bảng; mô tả sơ đồ/biểu đồ/hình vẽ bằng các nhãn, trục, quan hệ và ý chính nhìn thấy.
+Không giải bài, không suy luận ngoài nội dung trên trang. Trả lời bằng tiếng Việt, ngắn gọn nhưng đủ từ khóa.`;
 
 const DEFAULT_MODELS = {
   claude: 'claude-sonnet-4-6',
@@ -45,6 +49,39 @@ export async function askAI({
     default:
       return callGemini({ apiKey, model: model || DEFAULT_MODELS.gemini, systemPrompt: sys, userText, imageDataUrl });
   }
+}
+
+export async function describeDocumentPageImage({
+  provider, apiKey, model, baseUrl, authScheme, endpointPath, apiFormat,
+  imageDataUrl, documentName, pageNumber, extractedText
+}) {
+  if (!apiKey) {
+    throw new Error('Chưa cấu hình API key để phân tích ảnh/sơ đồ trong PDF.');
+  }
+
+  const textPreview = extractedText?.trim()
+    ? `\n\nText PDF.js đã trích được từ trang này để đối chiếu:\n"""\n${extractedText.trim().slice(0, 3000)}\n"""`
+    : '';
+  const question = `Đọc trang ${pageNumber} của tài liệu "${documentName || 'PDF'}".
+
+Hãy tạo nội dung index cho trang này:
+- Ghi lại text/công thức/bảng quan trọng nhìn thấy.
+- Nếu có sơ đồ, biểu đồ, hình vẽ, hãy mô tả các thành phần, nhãn, trục, mũi tên, quan hệ chính.
+- Giữ các thuật ngữ gốc nếu là tiếng Anh/ký hiệu.
+- Nếu trang gần như trống hoặc không có nội dung học tập hữu ích, chỉ trả lời EMPTY.${textPreview}`;
+
+  return askAI({
+    provider,
+    apiKey,
+    model,
+    baseUrl,
+    authScheme,
+    endpointPath,
+    apiFormat,
+    systemPrompt: DOCUMENT_VISION_SYSTEM_PROMPT,
+    question,
+    imageDataUrl
+  });
 }
 
 // === Helpers cho data URL ===

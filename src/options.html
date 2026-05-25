@@ -128,7 +128,11 @@
       <div class="document-upload-row">
         <input type="file" id="pdf-upload" accept=".pdf,application/pdf" multiple>
       </div>
-      <p class="hint">V1 chỉ hỗ trợ PDF có text. PDF scan/ảnh sẽ báo lỗi vì chưa có OCR.</p>
+      <label class="toggle-row document-visual-toggle">
+        <input type="checkbox" id="index-pdf-visuals">
+        <span>Phân tích ảnh, sơ đồ, biểu đồ trong PDF bằng AI khi nạp</span>
+      </label>
+      <p class="hint">Khi bật, extension render từng trang PDF thành ảnh, gửi ảnh đó đến provider AI đã chọn để tạo OCR/mô tả, rồi chỉ lưu text mô tả local.</p>
       <div id="document-status" class="document-status hidden"></div>
       <div id="document-list" class="document-list">
         <div class="document-empty">Chưa có tài liệu nào</div>

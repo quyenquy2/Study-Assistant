@@ -213,6 +213,10 @@ textarea { resize: vertical; min-height: 100px; font-family: inherit; }
   font-size: 13px;
 }
 
+.document-visual-toggle {
+  margin-top: 12px;
+}
+
 .document-status {
   margin-top: 10px;
   padding: 9px 11px;
