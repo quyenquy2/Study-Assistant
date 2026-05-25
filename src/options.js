@@ -21,7 +21,8 @@ init();
 async function init() {
   const cfg = await chrome.storage.sync.get([
     'provider', 'apiKey', 'model', 'systemPrompt',
-    'baseUrl', 'authScheme', 'endpointPath', 'apiFormat', 'autoTick'
+    'baseUrl', 'authScheme', 'endpointPath', 'apiFormat', 'lookupMode',
+    'showSelectionIcon'
   ]);
 
   if (cfg.provider) {
@@ -35,7 +36,9 @@ async function init() {
   $('#endpoint-path').value = cfg.endpointPath || '';
   $('#auth-scheme').value = cfg.authScheme || '';
   $('#api-format').value = cfg.apiFormat || 'openai';
-  $('#auto-tick').checked = cfg.autoTick !== false; // default true
+  const modeRadio = document.querySelector(`input[name="lookupMode"][value="${cfg.lookupMode || 'detail'}"]`);
+  if (modeRadio) modeRadio.checked = true;
+  $('#show-selection-icon').checked = cfg.showSelectionIcon !== false;
 
   updateHints();
   await renderShortcuts();
@@ -54,6 +57,9 @@ async function init() {
   $('#save-btn').addEventListener('click', save);
   $('#test-btn').addEventListener('click', test);
   $('#open-shortcuts').addEventListener('click', openShortcutsPage);
+  $('#show-selection-icon').addEventListener('change', async () => {
+    await chrome.storage.sync.set({ showSelectionIcon: $('#show-selection-icon').checked });
+  });
 }
 
 function getProvider() {
@@ -93,6 +99,8 @@ async function save() {
   const endpointPath = $('#endpoint-path').value.trim();
   const authScheme = $('#auth-scheme').value.trim();
   const apiFormat = $('#api-format').value;
+  const lookupMode = document.querySelector('input[name="lookupMode"]:checked')?.value || 'detail';
+  const showSelectionIcon = $('#show-selection-icon').checked;
 
   if (!apiKey) {
     showStatus('Vui lòng nhập API key', 'error');
@@ -107,9 +115,10 @@ async function save() {
   await chrome.storage.sync.set({
     provider, apiKey, model, systemPrompt,
     baseUrl, endpointPath, authScheme, apiFormat,
-    autoTick: $('#auto-tick').checked
+    lookupMode,
+    showSelectionIcon
   });
-  showStatus(`✓ Đã lưu cấu hình (provider: ${provider})`, 'success');
+  showStatus(`✓ Đã lưu cấu hình (provider: ${provider}, mode: ${lookupMode})`, 'success');
 }
 
 async function test() {
@@ -140,8 +149,7 @@ async function renderShortcuts() {
   const labels = {
     'lookup-selection': 'Tra cứu đoạn bôi đen',
     '_execute_action': 'Mở popup Study Assistant',
-    'screenshot-lookup': 'Chụp vùng màn hình',
-    'scan-question': 'Tra cứu nhanh (toast)'
+    'screenshot-lookup': 'Chụp vùng màn hình'
   };
 
   try {

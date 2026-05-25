@@ -8,28 +8,39 @@ const CONTEXT_MENU_SCREENSHOT = 'study-assistant-screenshot';
 
 // === Setup khi cài đặt ===
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_LOOKUP,
-    title: 'Tra cứu với Study Assistant: "%s"',
-    contexts: ['selection']
-  });
-  chrome.contextMenus.create({
-    id: CONTEXT_MENU_SCREENSHOT,
-    title: '📷 Chụp vùng để tra cứu',
-    contexts: ['page', 'image']
-  });
-  chrome.contextMenus.create({
-    id: 'study-assistant-scan',
-    title: '⚡ Tra cứu nhanh (toast)',
-    contexts: ['selection']
+  chrome.contextMenus.removeAll(() => {
+    createContextMenus();
   });
 
-  chrome.storage.sync.get(['provider', 'apiKey'], (data) => {
+  chrome.storage.sync.get(['provider', 'apiKey', 'lookupMode', 'showSelectionIcon'], (data) => {
+    const defaults = {};
+    if (!data.lookupMode) {
+      defaults.lookupMode = 'detail';
+    }
+    if (data.showSelectionIcon === undefined) {
+      defaults.showSelectionIcon = true;
+    }
+    if (Object.keys(defaults).length > 0) {
+      chrome.storage.sync.set(defaults);
+    }
     if (!data.apiKey) {
       chrome.runtime.openOptionsPage();
     }
   });
 });
+
+function createContextMenus() {
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_LOOKUP,
+    title: 'Tra cứu đoạn bôi đen: "%s"',
+    contexts: ['selection']
+  });
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_SCREENSHOT,
+    title: '📷 Chụp vùng màn hình để tra cứu',
+    contexts: ['page', 'image']
+  });
+}
 
 // === Context menu click ===
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -38,8 +49,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await triggerLookupInTab(tab.id, info.selectionText);
   } else if (info.menuItemId === CONTEXT_MENU_SCREENSHOT) {
     await startScreenshotMode(tab.id);
-  } else if (info.menuItemId === 'study-assistant-scan') {
-    await startScanMode(tab.id);
   }
 });
 
@@ -67,8 +76,6 @@ chrome.commands.onCommand.addListener(async (command, commandTab) => {
       }
     } else if (command === 'screenshot-lookup') {
       await startScreenshotMode(tab.id);
-    } else if (command === 'scan-question') {
-      await startScanMode(tab.id);
     }
   } catch (e) {
     console.warn('[Study Assistant] command handler failed:', e.message);
@@ -115,7 +122,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 async function triggerLookupInTab(tabId, selectionText) {
   try {
     await sendOrInject(tabId, {
-      type: 'SHOW_LOOKUP',
+      type: 'LOOKUP_TEXT',
       text: selectionText
     });
   } catch (e) {
@@ -128,38 +135,6 @@ async function startScreenshotMode(tabId) {
     await sendOrInject(tabId, { type: 'START_SCREENSHOT_OVERLAY' });
   } catch (e) {
     console.warn('Cannot start screenshot here:', e.message);
-  }
-}
-
-async function startScanMode(tabId) {
-  try {
-    let selectionText = '';
-    try {
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => window.getSelection()?.toString() ?? ''
-      });
-      selectionText = (result?.result || '').trim();
-    } catch (_) {}
-
-    if (!selectionText) {
-      // Không có selection thì hiện banner báo
-      try {
-        await sendOrInject(tabId, {
-          type: 'TOAST_ANSWER',
-          mode: 'error',
-          text: 'Hãy bôi đen câu hỏi rồi nhấn Ctrl+Shift+Q'
-        });
-      } catch (_) {}
-      return;
-    }
-
-    await sendOrInject(tabId, {
-      type: 'QUICK_LOOKUP_TOAST',
-      text: selectionText
-    });
-  } catch (e) {
-    console.warn('Cannot start quick lookup here:', e.message);
   }
 }
 

@@ -10,15 +10,18 @@ const copyBtn = $('#copy-btn');
 const historyList = $('#history-list');
 const clearHistoryBtn = $('#clear-history');
 const noKeyWarning = $('#no-key-warning');
+const modeInputs = document.querySelectorAll('input[name="lookup-mode"]');
 
 init();
 
 async function init() {
-  // Kiểm tra API key
-  const { apiKey } = await chrome.storage.sync.get(['apiKey']);
+  // Kiểm tra API key và mode hiện tại
+  const { apiKey, lookupMode } = await chrome.storage.sync.get(['apiKey', 'lookupMode']);
   if (!apiKey) {
     noKeyWarning.classList.remove('hidden');
   }
+  setSelectedMode(lookupMode || 'detail');
+  updateAskButtonLabel();
 
   // Pre-fill bằng selection hiện tại từ tab active
   try {
@@ -38,6 +41,13 @@ async function init() {
   askBtn.addEventListener('click', handleAsk);
   questionInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAsk();
+  });
+  modeInputs.forEach((input) => {
+    input.addEventListener('change', async () => {
+      if (!input.checked) return;
+      await chrome.storage.sync.set({ lookupMode: input.value });
+      updateAskButtonLabel();
+    });
   });
 
   copyBtn.addEventListener('click', () => {
@@ -81,8 +91,27 @@ async function handleAsk() {
   const question = questionInput.value.trim();
   if (!question) return;
 
+  const mode = getSelectedMode();
   askBtn.disabled = true;
   askBtn.textContent = 'Đang phân tích...';
+
+  if (mode === 'quick') {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) throw new Error('Không tìm thấy tab hiện tại');
+      await sendOrInject(tab.id, { type: 'LOOKUP_TEXT', text: question, mode: 'quick' });
+      window.close();
+      return;
+    } catch (err) {
+      answerSection.classList.remove('hidden');
+      answerContent.innerHTML = `<div class="sa-error">⚠️ ${escapeHtml(err.message)}</div>`;
+    } finally {
+      askBtn.disabled = false;
+      updateAskButtonLabel();
+    }
+    return;
+  }
+
   answerSection.classList.remove('hidden');
   answerContent.innerHTML = '<em style="color:#888">Đang phân tích...</em>';
 
@@ -102,9 +131,26 @@ async function handleAsk() {
     answerContent.innerHTML = `<div class="sa-error">⚠️ ${escapeHtml(err.message)}</div>`;
   } finally {
     askBtn.disabled = false;
-    askBtn.textContent = 'Tra cứu (Ctrl+Enter)';
+    updateAskButtonLabel();
     loadHistory();
   }
+}
+
+function getSelectedMode() {
+  return document.querySelector('input[name="lookup-mode"]:checked')?.value || 'detail';
+}
+
+function setSelectedMode(mode) {
+  const normalized = mode === 'quick' ? 'quick' : 'detail';
+  modeInputs.forEach((input) => {
+    input.checked = input.value === normalized;
+  });
+}
+
+function updateAskButtonLabel() {
+  askBtn.textContent = getSelectedMode() === 'quick'
+    ? 'Tra cứu quick (Ctrl+Enter)'
+    : 'Tra cứu detail (Ctrl+Enter)';
 }
 
 async function loadHistory() {

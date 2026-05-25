@@ -98,12 +98,29 @@
     </section>
 
     <section class="card">
-      <h2>4. Hành vi quét câu hỏi</h2>
+      <h2>4. Chế độ tra cứu</h2>
+      <div class="mode-grid">
+        <label class="mode-card-option">
+          <input type="radio" name="lookupMode" value="detail" checked>
+          <div class="mode-card">
+            <div class="mode-name">Detail</div>
+            <div class="mode-desc">Hiện popup và trả lời theo prompt đã cấu hình</div>
+          </div>
+        </label>
+        <label class="mode-card-option">
+          <input type="radio" name="lookupMode" value="quick">
+          <div class="mode-card">
+            <div class="mode-name">Quick</div>
+            <div class="mode-desc">Chỉ hiện toast nhỏ với đáp án ngắn</div>
+          </div>
+        </label>
+      </div>
+      <p class="hint">Mode này áp dụng cho cả tra cứu đoạn bôi đen và chụp vùng màn hình.</p>
       <label class="toggle-row">
-        <input type="checkbox" id="auto-tick" checked>
-        <span>Tự động tick đáp án đúng sau khi quét</span>
+        <input type="checkbox" id="show-selection-icon" checked>
+        <span>Tự hiện icon khi bôi đen text</span>
       </label>
-      <p class="hint">Khi bật, sau khi AI phân tích xong sẽ tự click vào radio/checkbox đáp án đúng. Tắt nếu bạn muốn xem trước rồi tự tick.</p>
+      <p class="hint">Tắt lựa chọn này nếu bạn không muốn Study Assistant tự hiện nút nổi khi bôi đen nội dung ngoài giờ học.</p>
     </section>
 
     <section class="card">

@@ -44,6 +44,41 @@ header button:hover { background: rgba(255, 255, 255, 0.35); }
 
 .hidden { display: none !important; }
 
+.mode-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 10px 14px;
+  background: white;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.mode-option {
+  cursor: pointer;
+}
+
+.mode-option input {
+  display: none;
+}
+
+.mode-option span {
+  display: block;
+  padding: 7px 10px;
+  border: 1px solid #d8dde3;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  background: #f8f9fb;
+}
+
+.mode-option input:checked + span {
+  border-color: #667eea;
+  background: #eef2ff;
+  color: #4456c9;
+}
+
 .ask-section { padding: 12px 14px; background: white; border-bottom: 1px solid #eef0f3; }
 
 textarea {

@@ -154,107 +154,19 @@
   inset: 0;
   z-index: 2147483647;
   cursor: crosshair;
-  background: rgba(0, 0, 0, 0.35);
+  background: transparent;
   user-select: none;
-}
-
-.sa-screenshot-overlay .sa-hint {
-  position: fixed;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  pointer-events: none;
 }
 
 .sa-screenshot-rect {
   position: fixed;
-  border: 2px solid #667eea;
-  background: rgba(102, 126, 234, 0.12);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+  border: 1px dashed #111;
+  background: transparent;
+  box-shadow: none;
   pointer-events: none;
 }
 
-.sa-screenshot-toolbar {
-  position: fixed;
-  display: flex;
-  gap: 8px;
-  background: white;
-  padding: 6px;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  z-index: 2147483647;
-}
-
-.sa-screenshot-toolbar button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.sa-screenshot-toolbar .sa-confirm {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-}
-
-.sa-screenshot-toolbar .sa-cancel {
-  background: #f0f2f5;
-  color: #555;
-}
-
-/* === Scan mode === */
-.sa-scan-hint {
-  position: fixed;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.85);
-  color: white;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  z-index: 2147483647;
-  pointer-events: none;
-}
-
-.sa-scan-highlight {
-  outline: 2px dashed #667eea !important;
-  outline-offset: 2px !important;
-  background: rgba(102, 126, 234, 0.06) !important;
-  cursor: crosshair !important;
-}
-
-.sa-correct-answer {
-  outline: 3px solid #2ecc71 !important;
-  outline-offset: 2px !important;
-  background: rgba(46, 204, 113, 0.12) !important;
-  border-radius: 4px;
-  transition: all 0.3s;
-}
-
-.sa-correct-badge {
-  display: inline-block;
-  background: #2ecc71;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
+/* === Quick toast === */
 .sa-corner-toast {
   position: fixed;
   right: 16px;
