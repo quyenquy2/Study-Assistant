@@ -9,7 +9,7 @@ Extension Chrome tra cứu đáp án bài tập, câu hỏi học tập bằng A
   - Chụp một vùng màn hình rồi tra cứu nội dung trong ảnh.
 - **2 mode trả lời**
   - **Detail**: hiện popup nổi trên trang và trả lời theo prompt hệ thống đã cấu hình.
-  - **Quick**: chỉ hiện toast nhỏ ở góc màn hình với đáp án ngắn.
+  - **Quick**: chỉ hiện toast nhỏ ở góc màn hình với đáp án ngắn, có thể tuỳ chỉnh màu nền, màu chữ, cỡ chữ và độ trong suốt.
 - **Tài liệu tham khảo PDF**: nạp PDF trong Options để AI dùng các đoạn liên quan làm ngữ cảnh khi trả lời; có tuỳ chọn AI OCR/mô tả ảnh, sơ đồ, biểu đồ trong PDF.
 - Hỗ trợ Gemini, Claude, OpenAI và Custom Gateway.
 - Lưu lịch sử 50 câu hỏi gần nhất.
@@ -80,6 +80,10 @@ study-assistant-extension/
 ## Tùy chỉnh prompt
 
 Trong Options, mục **Prompt hệ thống** cho phép đổi cách AI trả lời. Mode `Detail` dùng prompt này để hiển thị kết quả đầy đủ; mode `Quick` vẫn ưu tiên đáp án ngắn để phù hợp toast.
+
+## Tuỳ chỉnh quick toast
+
+Trong Options, mục **Chế độ tra cứu** -> **Tuỳ chỉnh toast quick mode** cho phép đổi màu nền, màu chữ, cỡ chữ và độ trong suốt của toast. Khi chưa bật tuỳ chỉnh, toast vẫn dùng màu mặc định: đáp án A/B/C/D màu xanh, `F` nền xám nhạt.
 
 ## License
 

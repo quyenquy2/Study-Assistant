@@ -18,13 +18,24 @@ const KEY_HINTS = {
   custom: 'API key do gateway bên thứ 3 cấp'
 };
 
+const QUICK_TOAST_DEFAULTS = {
+  backgroundColor: '#2ecc71',
+  textColor: '#ffffff',
+  fontSize: 14,
+  opacity: 0.95
+};
+
+let saveQuickToastTimer = null;
+
 init();
 
 async function init() {
   const cfg = await chrome.storage.sync.get([
     'provider', 'apiKey', 'model', 'systemPrompt',
     'baseUrl', 'authScheme', 'endpointPath', 'apiFormat', 'lookupMode',
-    'showSelectionIcon', 'indexPdfVisuals'
+    'showSelectionIcon', 'indexPdfVisuals',
+    'quickToastStyleEnabled', 'quickToastBackgroundColor', 'quickToastTextColor',
+    'quickToastFontSize', 'quickToastOpacity'
   ]);
 
   if (cfg.provider) {
@@ -42,6 +53,7 @@ async function init() {
   if (modeRadio) modeRadio.checked = true;
   $('#show-selection-icon').checked = cfg.showSelectionIcon !== false;
   $('#index-pdf-visuals').checked = cfg.indexPdfVisuals === true;
+  setQuickToastSettings(cfg);
 
   updateHints();
   await renderShortcuts();
@@ -65,6 +77,17 @@ async function init() {
   });
   $('#index-pdf-visuals').addEventListener('change', async () => {
     await chrome.storage.sync.set({ indexPdfVisuals: $('#index-pdf-visuals').checked });
+  });
+  $('#quick-toast-style-enabled').addEventListener('change', () => {
+    updateQuickToastPreview();
+    saveQuickToastSettings();
+  });
+  ['quick-toast-bg-color', 'quick-toast-text-color', 'quick-toast-font-size', 'quick-toast-opacity'].forEach((id) => {
+    $(`#${id}`).addEventListener('input', () => {
+      $('#quick-toast-style-enabled').checked = true;
+      updateQuickToastPreview();
+      scheduleQuickToastSettingsSave();
+    });
   });
   $('#pdf-upload').addEventListener('change', handlePdfUpload);
   $('#document-list').addEventListener('click', handleDocumentListClick);
@@ -112,6 +135,7 @@ async function save() {
   const lookupMode = document.querySelector('input[name="lookupMode"]:checked')?.value || 'detail';
   const showSelectionIcon = $('#show-selection-icon').checked;
   const indexPdfVisuals = $('#index-pdf-visuals').checked;
+  const quickToastSettings = getQuickToastSettings();
 
   if (!apiKey) {
     showStatus('Vui lòng nhập API key', 'error');
@@ -128,9 +152,77 @@ async function save() {
     baseUrl, endpointPath, authScheme, apiFormat,
     lookupMode,
     showSelectionIcon,
-    indexPdfVisuals
+    indexPdfVisuals,
+    ...quickToastSettings
   });
   showStatus(`✓ Đã lưu cấu hình (provider: ${provider}, mode: ${lookupMode})`, 'success');
+}
+
+function setQuickToastSettings(cfg) {
+  $('#quick-toast-style-enabled').checked = cfg.quickToastStyleEnabled === true;
+  $('#quick-toast-bg-color').value = normalizeHexColor(cfg.quickToastBackgroundColor, QUICK_TOAST_DEFAULTS.backgroundColor);
+  $('#quick-toast-text-color').value = normalizeHexColor(cfg.quickToastTextColor, QUICK_TOAST_DEFAULTS.textColor);
+  $('#quick-toast-font-size').value = normalizeFontSize(cfg.quickToastFontSize, QUICK_TOAST_DEFAULTS.fontSize);
+  $('#quick-toast-opacity').value = normalizeOpacity(cfg.quickToastOpacity, QUICK_TOAST_DEFAULTS.opacity);
+  updateQuickToastPreview();
+}
+
+function getQuickToastSettings() {
+  return {
+    quickToastStyleEnabled: $('#quick-toast-style-enabled').checked,
+    quickToastBackgroundColor: normalizeHexColor($('#quick-toast-bg-color').value, QUICK_TOAST_DEFAULTS.backgroundColor),
+    quickToastTextColor: normalizeHexColor($('#quick-toast-text-color').value, QUICK_TOAST_DEFAULTS.textColor),
+    quickToastFontSize: normalizeFontSize($('#quick-toast-font-size').value, QUICK_TOAST_DEFAULTS.fontSize),
+    quickToastOpacity: normalizeOpacity($('#quick-toast-opacity').value, QUICK_TOAST_DEFAULTS.opacity)
+  };
+}
+
+function updateQuickToastPreview() {
+  const preview = $('#quick-toast-preview');
+  if (!preview) return;
+
+  const settings = getQuickToastSettings();
+  const isCustom = settings.quickToastStyleEnabled;
+  preview.style.background = isCustom
+    ? hexToRgba(settings.quickToastBackgroundColor, settings.quickToastOpacity)
+    : hexToRgba(QUICK_TOAST_DEFAULTS.backgroundColor, QUICK_TOAST_DEFAULTS.opacity);
+  preview.style.color = isCustom ? settings.quickToastTextColor : QUICK_TOAST_DEFAULTS.textColor;
+  preview.style.fontSize = `${settings.quickToastFontSize}px`;
+}
+
+function scheduleQuickToastSettingsSave() {
+  clearTimeout(saveQuickToastTimer);
+  saveQuickToastTimer = setTimeout(saveQuickToastSettings, 200);
+}
+
+async function saveQuickToastSettings() {
+  clearTimeout(saveQuickToastTimer);
+  await chrome.storage.sync.set(getQuickToastSettings());
+}
+
+function normalizeHexColor(value, fallback) {
+  const color = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+}
+
+function normalizeFontSize(value, fallback) {
+  const size = Number(value);
+  if (!Number.isFinite(size)) return fallback;
+  return Math.min(48, Math.max(10, Math.round(size)));
+}
+
+function normalizeOpacity(value, fallback) {
+  const opacity = Number(value);
+  if (!Number.isFinite(opacity)) return fallback;
+  return Math.min(1, Math.max(0.1, opacity));
+}
+
+function hexToRgba(hex, opacity) {
+  const color = normalizeHexColor(hex, QUICK_TOAST_DEFAULTS.backgroundColor).slice(1);
+  const r = parseInt(color.slice(0, 2), 16);
+  const g = parseInt(color.slice(2, 4), 16);
+  const b = parseInt(color.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${normalizeOpacity(opacity, QUICK_TOAST_DEFAULTS.opacity)})`;
 }
 
 async function test() {

@@ -116,6 +116,36 @@
         </label>
       </div>
       <p class="hint">Mode này áp dụng cho cả tra cứu đoạn bôi đen và chụp vùng màn hình.</p>
+
+      <div class="quick-toast-settings">
+        <div class="quick-toast-head">
+          <label class="toggle-row">
+            <input type="checkbox" id="quick-toast-style-enabled">
+            <span>Tuỳ chỉnh toast quick mode</span>
+          </label>
+          <div id="quick-toast-preview" class="quick-toast-preview">A</div>
+        </div>
+        <div class="toast-control-grid">
+          <div class="field compact-field">
+            <label for="quick-toast-bg-color">Màu nền</label>
+            <input type="color" id="quick-toast-bg-color" value="#2ecc71">
+          </div>
+          <div class="field compact-field">
+            <label for="quick-toast-text-color">Màu chữ</label>
+            <input type="color" id="quick-toast-text-color" value="#ffffff">
+          </div>
+          <div class="field compact-field">
+            <label for="quick-toast-font-size">Cỡ chữ</label>
+            <input type="number" id="quick-toast-font-size" min="10" max="48" step="1" value="14">
+          </div>
+          <div class="field compact-field">
+            <label for="quick-toast-opacity">Độ trong suốt</label>
+            <input type="number" id="quick-toast-opacity" min="0.1" max="1" step="0.05" value="0.95">
+          </div>
+        </div>
+        <p class="hint">Khi chưa bật tuỳ chỉnh, toast vẫn dùng màu mặc định: đáp án xanh, F nền xám nhạt.</p>
+      </div>
+
       <label class="toggle-row">
         <input type="checkbox" id="show-selection-icon" checked>
         <span>Tự hiện icon khi bôi đen text</span>

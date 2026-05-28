@@ -7,14 +7,28 @@
   const LOOKUP_MODE_DETAIL = 'detail';
   const LOOKUP_MODE_QUICK = 'quick';
   const QUICK_IMAGE_PROMPT = 'Đọc nội dung trong ảnh. Nếu là câu trắc nghiệm, trả lời đáp án đúng ngắn gọn. Nếu không, trả lời ngắn gọn nhất có thể.';
+  const QUICK_TOAST_DEFAULT_STYLE = {
+    enabled: false,
+    backgroundColor: '#2ecc71',
+    textColor: '#ffffff',
+    fontSize: 14,
+    opacity: 0.95
+  };
+  const TOAST_TYPE_STYLES = {
+    success: { background: 'rgba(46, 204, 113, 0.95)', color: 'white' },
+    info: { background: 'rgba(102, 126, 234, 0.95)', color: 'white' },
+    fail: { background: 'rgba(238, 240, 243, 0.98)', color: '#555' },
+    error: { background: 'rgba(192, 57, 43, 0.95)', color: 'white' }
+  };
 
   let floatingBtn = null;
   let resultPopup = null;
   let lastSelectionText = '';
   let screenshotState = null;
   let showSelectionIcon = true;
+  let quickToastStyle = { ...QUICK_TOAST_DEFAULT_STYLE };
 
-  initSelectionIconSetting();
+  initSettings();
 
   // === Floating button khi có text được chọn ===
   document.addEventListener('mouseup', (e) => {
@@ -57,16 +71,40 @@
     }
   });
 
-  function initSelectionIconSetting() {
-    chrome.storage.sync.get(['showSelectionIcon'], (data) => {
+  function initSettings() {
+    chrome.storage.sync.get([
+      'showSelectionIcon',
+      'quickToastStyleEnabled',
+      'quickToastBackgroundColor',
+      'quickToastTextColor',
+      'quickToastFontSize',
+      'quickToastOpacity'
+    ], (data) => {
       showSelectionIcon = data.showSelectionIcon !== false;
+      quickToastStyle = normalizeQuickToastStyle(data);
       if (!showSelectionIcon) hideFloatingButton();
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== 'sync' || !changes.showSelectionIcon) return;
-      showSelectionIcon = changes.showSelectionIcon.newValue !== false;
-      if (!showSelectionIcon) hideFloatingButton();
+      if (areaName !== 'sync') return;
+      if (changes.showSelectionIcon) {
+        showSelectionIcon = changes.showSelectionIcon.newValue !== false;
+        if (!showSelectionIcon) hideFloatingButton();
+      }
+
+      if (changes.quickToastStyleEnabled || changes.quickToastBackgroundColor
+          || changes.quickToastTextColor || changes.quickToastFontSize || changes.quickToastOpacity) {
+        quickToastStyle = {
+          ...quickToastStyle,
+          ...normalizeQuickToastStyle({
+            quickToastStyleEnabled: changes.quickToastStyleEnabled?.newValue ?? quickToastStyle.enabled,
+            quickToastBackgroundColor: changes.quickToastBackgroundColor?.newValue ?? quickToastStyle.backgroundColor,
+            quickToastTextColor: changes.quickToastTextColor?.newValue ?? quickToastStyle.textColor,
+            quickToastFontSize: changes.quickToastFontSize?.newValue ?? quickToastStyle.fontSize,
+            quickToastOpacity: changes.quickToastOpacity?.newValue ?? quickToastStyle.opacity
+          })
+        };
+      }
     });
   }
 
@@ -368,23 +406,62 @@ ${text}`;
   function cornerToast(text, type = 'success', duration = 1000) {
     const tip = document.createElement('div');
     tip.className = 'sa-corner-toast';
-    if (type === 'success') {
-      tip.style.background = 'rgba(46, 204, 113, 0.95)';
-      tip.style.color = 'white';
-    } else if (type === 'info') {
-      tip.style.background = 'rgba(102, 126, 234, 0.95)';
-      tip.style.color = 'white';
-    } else if (type === 'fail') {
-      tip.style.background = 'rgba(238, 240, 243, 0.98)';
-      tip.style.color = '#555';
-    } else {
-      tip.style.background = 'rgba(192, 57, 43, 0.95)';
-      tip.style.color = 'white';
-    }
+    const style = getCornerToastStyle(type);
+    tip.style.background = style.background;
+    tip.style.color = style.color;
+    tip.style.fontSize = `${style.fontSize}px`;
     tip.textContent = text;
     document.body.appendChild(tip);
     if (duration > 0) setTimeout(() => tip.remove(), duration);
     return tip;
+  }
+
+  function getCornerToastStyle(type) {
+    if (quickToastStyle.enabled) {
+      return {
+        background: hexToRgba(quickToastStyle.backgroundColor, quickToastStyle.opacity),
+        color: quickToastStyle.textColor,
+        fontSize: quickToastStyle.fontSize
+      };
+    }
+
+    const fallback = TOAST_TYPE_STYLES[type] || TOAST_TYPE_STYLES.error;
+    return { ...fallback, fontSize: QUICK_TOAST_DEFAULT_STYLE.fontSize };
+  }
+
+  function normalizeQuickToastStyle(data = {}) {
+    return {
+      enabled: data.quickToastStyleEnabled === true,
+      backgroundColor: normalizeHexColor(data.quickToastBackgroundColor, QUICK_TOAST_DEFAULT_STYLE.backgroundColor),
+      textColor: normalizeHexColor(data.quickToastTextColor, QUICK_TOAST_DEFAULT_STYLE.textColor),
+      fontSize: normalizeFontSize(data.quickToastFontSize, QUICK_TOAST_DEFAULT_STYLE.fontSize),
+      opacity: normalizeOpacity(data.quickToastOpacity, QUICK_TOAST_DEFAULT_STYLE.opacity)
+    };
+  }
+
+  function hexToRgba(hex, opacity) {
+    const color = normalizeHexColor(hex, QUICK_TOAST_DEFAULT_STYLE.backgroundColor).slice(1);
+    const r = parseInt(color.slice(0, 2), 16);
+    const g = parseInt(color.slice(2, 4), 16);
+    const b = parseInt(color.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${normalizeOpacity(opacity, QUICK_TOAST_DEFAULT_STYLE.opacity)})`;
+  }
+
+  function normalizeHexColor(value, fallback) {
+    const color = String(value || '').trim();
+    return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+  }
+
+  function normalizeFontSize(value, fallback) {
+    const size = Number(value);
+    if (!Number.isFinite(size)) return fallback;
+    return Math.min(48, Math.max(10, Math.round(size)));
+  }
+
+  function normalizeOpacity(value, fallback) {
+    const opacity = Number(value);
+    if (!Number.isFinite(opacity)) return fallback;
+    return Math.min(1, Math.max(0.1, opacity));
   }
 
   function parseMultipleChoice(text) {
